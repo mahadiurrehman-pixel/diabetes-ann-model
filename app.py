@@ -1,9 +1,8 @@
 import streamlit as st
 import numpy as np
 import joblib
-import os
-import json
-from tensorflow.keras.models import model_from_json
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Dropout
 
 # ==========================================
 # PAGE CONFIG
@@ -32,8 +31,7 @@ st.markdown("""
     [data-testid="stSidebar"] .stMarkdown h3 {
         color: #e94560 !important;
     }
-    [data-testid="stSidebar"] .stMarkdown p,
-    [data-testid="stSidebar"] .stMarkdown li {
+    [data-testid="stSidebar"] .stMarkdown p {
         color: #a8a8b3 !important;
     }
     h1 {
@@ -45,10 +43,7 @@ st.markdown("""
         text-align: center;
         padding: 10px 0;
     }
-    h2, h3 {
-        color: #53a8b6 !important;
-        font-weight: 700 !important;
-    }
+    h2, h3 { color: #53a8b6 !important; font-weight: 700 !important; }
     .main-card {
         background: rgba(255, 255, 255, 0.05);
         border: 1px solid rgba(255, 255, 255, 0.1);
@@ -64,10 +59,9 @@ st.markdown("""
         border-radius: 16px;
         padding: 25px;
         margin: 10px 0;
-        backdrop-filter: blur(12px);
     }
     .stat-card {
-        background: linear-gradient(135deg, rgba(233, 69, 96, 0.15), rgba(83, 168, 182, 0.15));
+        background: linear-gradient(135deg, rgba(233,69,96,0.15), rgba(83,168,182,0.15));
         border: 1px solid rgba(233, 69, 96, 0.3);
         border-radius: 16px;
         padding: 20px;
@@ -121,7 +115,7 @@ st.markdown("""
         box-shadow: 0 10px 30px rgba(233, 69, 96, 0.6) !important;
     }
     .result-positive {
-        background: linear-gradient(135deg, rgba(233, 69, 96, 0.2), rgba(194, 49, 82, 0.1));
+        background: linear-gradient(135deg, rgba(233,69,96,0.2), rgba(194,49,82,0.1));
         border: 2px solid #e94560;
         border-radius: 20px;
         padding: 30px;
@@ -129,7 +123,7 @@ st.markdown("""
         animation: pulse-red 2s infinite;
     }
     .result-negative {
-        background: linear-gradient(135deg, rgba(46, 213, 115, 0.2), rgba(39, 174, 96, 0.1));
+        background: linear-gradient(135deg, rgba(46,213,115,0.2), rgba(39,174,96,0.1));
         border: 2px solid #2ed573;
         border-radius: 20px;
         padding: 30px;
@@ -151,15 +145,6 @@ st.markdown("""
     .stProgress > div > div {
         background: rgba(255, 255, 255, 0.1) !important;
         border-radius: 10px !important;
-    }
-    [data-testid="stMetricValue"] {
-        font-size: 2rem !important;
-        font-weight: 800 !important;
-        color: #e94560 !important;
-    }
-    [data-testid="stMetricLabel"] {
-        color: #53a8b6 !important;
-        font-weight: 600 !important;
     }
     .rec-card {
         background: rgba(83, 168, 182, 0.1);
@@ -204,43 +189,45 @@ st.markdown("""
         font-size: 1.15rem;
         letter-spacing: 3px;
         text-transform: uppercase;
-        margin-top: 5px;
     }
 </style>
 """, unsafe_allow_html=True)
 
 
 # ==========================================
-# LOAD MODEL & SCALER — FIXED
+# BUILD MODEL FROM SCRATCH + LOAD WEIGHTS
+# ← YEH NAYA APPROACH HAI - NO VERSION ISSUE
 # ==========================================
 @st.cache_resource
 def load_artifacts():
-    # Load architecture
-    with open('model_architecture.json', 'r') as f:
-        model_json = json.load(f)
-
-    # Rebuild model
-    model = model_from_json(model_json)
-
-    # Load weights
-    model.load_weights('model_weights.weights.h5')
-
-    # Compile
+    
+    # Model architecture dobara banao
+    # (same jaise training mein tha)
+    model = Sequential([
+        Dense(16, activation='relu', input_shape=(8,)),
+        Dropout(0.3),
+        Dense(8, activation='relu'),
+        Dropout(0.2),
+        Dense(1, activation='sigmoid')
+    ])
+    
     model.compile(
         optimizer='adam',
         loss='binary_crossentropy',
         metrics=['accuracy']
     )
-
-    # Load scaler
+    
+    # Numpy se weights load karo
+    weights = np.load('model_weights.npy', allow_pickle=True)
+    model.set_weights(weights)
+    
+    # Scaler load karo
     scaler = joblib.load('scaler.pkl')
-
+    
     return model, scaler
 
-# ==========================================
-# GLOBAL VARIABLES — FIXED SCOPE
-# ==========================================
-model, scaler = load_artifacts()  # ← Yahan globally assign ho rahe hain
+# Globally assign karo
+model, scaler = load_artifacts()
 
 
 # ==========================================
@@ -268,7 +255,6 @@ st.markdown('<div class="custom-divider"></div>', unsafe_allow_html=True)
 # ==========================================
 with st.sidebar:
     st.markdown("## 🧠 About the Model")
-
     st.markdown("""
     <div class="glass-card">
         <p style="color: #a8a8b3; font-size: 0.95rem;">
@@ -280,30 +266,17 @@ with st.sidebar:
     """, unsafe_allow_html=True)
 
     st.markdown("### 📊 Model Performance")
-
-    st.markdown("""
-    <div class="stat-card">
-        <div class="stat-number">81%</div>
-        <div class="stat-label">Recall (Sensitivity)</div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.markdown("""
-    <div class="stat-card">
-        <div class="stat-number">68%</div>
-        <div class="stat-label">F1 Score</div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.markdown("""
-    <div class="stat-card">
-        <div class="stat-number">82%</div>
-        <div class="stat-label">ROC AUC Score</div>
-    </div>
-    """, unsafe_allow_html=True)
+    for stat in [("81%", "Recall (Sensitivity)"), 
+                 ("68%", "F1 Score"), 
+                 ("82%", "ROC AUC Score")]:
+        st.markdown(f"""
+        <div class="stat-card">
+            <div class="stat-number">{stat[0]}</div>
+            <div class="stat-label">{stat[1]}</div>
+        </div>
+        """, unsafe_allow_html=True)
 
     st.markdown('<div class="custom-divider"></div>', unsafe_allow_html=True)
-
     st.markdown("### 🔬 Tech Stack")
     st.markdown("""
     <div class="glass-card">
@@ -317,14 +290,12 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
 
-    st.markdown('<div class="custom-divider"></div>', unsafe_allow_html=True)
-
     st.markdown("""
-    <div style="text-align: center; padding: 10px;">
-        <p style="color: #666; font-size: 0.8rem;">
+    <div style="text-align:center; padding:10px; margin-top:20px;">
+        <p style="color:#666; font-size:0.8rem;">
         Built with ❤️ by<br>
         <a href="https://github.com/mahadiurrehman-pixel"
-           style="color: #e94560; text-decoration: none; font-weight: bold;">
+           style="color:#e94560; text-decoration:none; font-weight:bold;">
         Mahadiur Rehman
         </a>
         </p>
@@ -337,8 +308,8 @@ with st.sidebar:
 # ==========================================
 st.markdown("""
 <div class="main-card">
-    <h3 style="text-align: center; margin-bottom: 5px;">📝 Patient Information</h3>
-    <p style="text-align: center; color: #a8a8b3; font-size: 0.9rem;">
+    <h3 style="text-align:center; margin-bottom:5px;">📝 Patient Information</h3>
+    <p style="text-align:center; color:#a8a8b3; font-size:0.9rem;">
     Enter the clinical measurements below for prediction
     </p>
 </div>
@@ -349,272 +320,187 @@ col1, col2 = st.columns(2)
 with col1:
     st.markdown("""
     <div class="glass-card">
-        <h4 style="color: #e94560; text-align: center;">🫀 Vitals</h4>
+        <h4 style="color:#e94560; text-align:center; margin:0;">🫀 Vitals</h4>
     </div>
     """, unsafe_allow_html=True)
-
-    pregnancies = st.number_input(
-        "🤰 Pregnancies",
-        min_value=0, max_value=20, value=1,
-        help="Number of times pregnant"
-    )
-    glucose = st.number_input(
-        "🍬 Glucose (mg/dL)",
-        min_value=0, max_value=300, value=120,
-        help="Plasma glucose concentration"
-    )
-    blood_pressure = st.number_input(
-        "💉 Blood Pressure (mm Hg)",
-        min_value=0, max_value=200, value=70,
-        help="Diastolic blood pressure"
-    )
-    skin_thickness = st.number_input(
-        "📏 Skin Thickness (mm)",
-        min_value=0, max_value=100, value=20,
-        help="Triceps skin fold thickness"
-    )
+    pregnancies    = st.number_input("🤰 Pregnancies", 0, 20, 1,
+                                     help="Number of times pregnant")
+    glucose        = st.number_input("🍬 Glucose (mg/dL)", 0, 300, 120,
+                                     help="Plasma glucose concentration")
+    blood_pressure = st.number_input("💉 Blood Pressure (mm Hg)", 0, 200, 70,
+                                     help="Diastolic blood pressure")
+    skin_thickness = st.number_input("📏 Skin Thickness (mm)", 0, 100, 20,
+                                     help="Triceps skin fold thickness")
 
 with col2:
     st.markdown("""
     <div class="glass-card">
-        <h4 style="color: #53a8b6; text-align: center;">📋 Measurements</h4>
+        <h4 style="color:#53a8b6; text-align:center; margin:0;">📋 Measurements</h4>
     </div>
     """, unsafe_allow_html=True)
-
-    insulin = st.number_input(
-        "💊 Insulin (mu U/ml)",
-        min_value=0, max_value=900, value=80,
-        help="2-Hour serum insulin"
-    )
-    bmi = st.number_input(
-        "⚖️ BMI (kg/m²)",
-        min_value=0.0, max_value=70.0, value=25.0, step=0.1,
-        help="Body Mass Index"
-    )
-    dpf = st.number_input(
-        "🧬 Diabetes Pedigree Function",
-        min_value=0.0, max_value=3.0, value=0.5, step=0.01,
-        help="Genetic diabetes risk score"
-    )
-    age = st.number_input(
-        "🎂 Age (years)",
-        min_value=1, max_value=120, value=30,
-        help="Patient age in years"
-    )
+    insulin = st.number_input("💊 Insulin (mu U/ml)", 0, 900, 80,
+                              help="2-Hour serum insulin")
+    bmi     = st.number_input("⚖️ BMI (kg/m²)", 0.0, 70.0, 25.0, 0.1,
+                              help="Body Mass Index")
+    dpf     = st.number_input("🧬 Diabetes Pedigree Function", 0.0, 3.0, 0.5, 0.01,
+                              help="Genetic diabetes risk score")
+    age     = st.number_input("🎂 Age (years)", 1, 120, 30,
+                              help="Patient age in years")
 
 st.markdown('<div class="custom-divider"></div>', unsafe_allow_html=True)
-
 
 # ==========================================
 # PREDICT BUTTON
 # ==========================================
-col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
-with col_btn2:
-    predict_clicked = st.button(
-        "🔍 ANALYZE & PREDICT",
-        use_container_width=True
-    )
+_, col_btn, _ = st.columns([1, 2, 1])
+with col_btn:
+    predict_clicked = st.button("🔍 ANALYZE & PREDICT", use_container_width=True)
 
 # ==========================================
-# PREDICTION LOGIC — FIXED SCOPE
+# PREDICTION RESULTS
 # ==========================================
 if predict_clicked:
 
-    # Input array
-    input_data = np.array([[
-        pregnancies, glucose, blood_pressure, skin_thickness,
-        insulin, bmi, dpf, age
-    ]])
-
-    # Scale — ab scaler globally available hai
+    input_data   = np.array([[pregnancies, glucose, blood_pressure,
+                               skin_thickness, insulin, bmi, dpf, age]])
     input_scaled = scaler.transform(input_data)
-
-    # Predict — ab model globally available hai
     prediction_prob = float(model.predict(input_scaled, verbose=0)[0][0])
-    prediction = 1 if prediction_prob > 0.5 else 0
+    prediction   = 1 if prediction_prob > 0.5 else 0
 
     st.markdown('<div class="custom-divider"></div>', unsafe_allow_html=True)
     st.markdown("## 📊 Prediction Results")
-    st.markdown("")
 
-    # Results Cards
-    res_col1, res_col2, res_col3 = st.columns(3)
-
-    with res_col1:
+    # 3 stat cards
+    c1, c2, c3 = st.columns(3)
+    with c1:
         st.markdown(f"""
         <div class="stat-card">
             <div class="stat-number">{prediction_prob*100:.1f}%</div>
             <div class="stat-label">Diabetes Probability</div>
-        </div>
-        """, unsafe_allow_html=True)
+        </div>""", unsafe_allow_html=True)
 
-    with res_col2:
+    with c2:
         if prediction_prob < 0.3:
-            risk_emoji = "🟢"
-            risk_text = "LOW RISK"
-            risk_color = "#2ed573"
+            r_emoji, r_text, r_color = "🟢", "LOW RISK", "#2ed573"
         elif prediction_prob < 0.7:
-            risk_emoji = "🟡"
-            risk_text = "MEDIUM RISK"
-            risk_color = "#ffa502"
+            r_emoji, r_text, r_color = "🟡", "MEDIUM RISK", "#ffa502"
         else:
-            risk_emoji = "🔴"
-            risk_text = "HIGH RISK"
-            risk_color = "#e94560"
+            r_emoji, r_text, r_color = "🔴", "HIGH RISK", "#e94560"
 
         st.markdown(f"""
         <div class="stat-card">
-            <div style="font-size: 2.5rem;">{risk_emoji}</div>
-            <div style="color: {risk_color}; font-size: 1.3rem;
-                        font-weight: 900; letter-spacing: 2px;">
-                {risk_text}
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+            <div style="font-size:2.5rem;">{r_emoji}</div>
+            <div style="color:{r_color}; font-size:1.3rem;
+                        font-weight:900; letter-spacing:2px;">{r_text}</div>
+        </div>""", unsafe_allow_html=True)
 
-    with res_col3:
+    with c3:
         confidence = max(prediction_prob, 1 - prediction_prob) * 100
         st.markdown(f"""
         <div class="stat-card">
             <div class="stat-number">{confidence:.1f}%</div>
             <div class="stat-label">Model Confidence</div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    st.markdown("")
+        </div>""", unsafe_allow_html=True)
 
     # Risk Meter
     st.markdown("""
-    <div class="risk-meter" style="background: rgba(255,255,255,0.05);
-         border-radius: 16px; padding: 20px;
-         border: 1px solid rgba(255,255,255,0.1);">
-        <h4 style="color: #53a8b6; text-align: center;">📈 Risk Meter</h4>
-    </div>
-    """, unsafe_allow_html=True)
+    <div style="background:rgba(255,255,255,0.05); border-radius:16px;
+                padding:20px; border:1px solid rgba(255,255,255,0.1); margin:15px 0;">
+        <h4 style="color:#53a8b6; text-align:center; margin:0 0 10px 0;">
+        📈 Risk Meter</h4>
+    </div>""", unsafe_allow_html=True)
     st.progress(float(prediction_prob))
-
-    st.markdown("")
 
     # Result Message
     if prediction == 1:
         st.markdown(f"""
         <div class="result-positive">
-            <h2 style="color: #e94560; margin: 0;">⚠️ DIABETES RISK DETECTED</h2>
-            <p style="color: #e0e0e0; font-size: 1.1rem; margin-top: 15px;">
-            Based on the clinical measurements, our AI model indicates a
-            <b style="color: #e94560;">{prediction_prob*100:.1f}%</b> probability
-            of diabetes. Please consult a healthcare professional immediately.
+            <h2 style="color:#e94560; margin:0;">⚠️ DIABETES RISK DETECTED</h2>
+            <p style="color:#e0e0e0; font-size:1.1rem; margin-top:15px;">
+            Our AI model indicates a <b style="color:#e94560;">
+            {prediction_prob*100:.1f}%</b> probability of diabetes.
+            Please consult a healthcare professional immediately.
             </p>
-        </div>
-        """, unsafe_allow_html=True)
+        </div>""", unsafe_allow_html=True)
     else:
         st.markdown(f"""
         <div class="result-negative">
-            <h2 style="color: #2ed573; margin: 0;">✅ LOW DIABETES RISK</h2>
-            <p style="color: #e0e0e0; font-size: 1.1rem; margin-top: 15px;">
-            Great news! Our AI model indicates a
-            <b style="color: #2ed573;">{(1-prediction_prob)*100:.1f}%</b> probability
-            of being diabetes-free. Keep maintaining a healthy lifestyle!
+            <h2 style="color:#2ed573; margin:0;">✅ LOW DIABETES RISK</h2>
+            <p style="color:#e0e0e0; font-size:1.1rem; margin-top:15px;">
+            Great news! Our AI model indicates a <b style="color:#2ed573;">
+            {(1-prediction_prob)*100:.1f}%</b> probability of being diabetes-free.
+            Keep maintaining a healthy lifestyle!
             </p>
-        </div>
-        """, unsafe_allow_html=True)
+        </div>""", unsafe_allow_html=True)
 
     st.markdown('<div class="custom-divider"></div>', unsafe_allow_html=True)
 
-    # Health Recommendations
+    # Recommendations
     st.markdown("## 💡 Personalized Health Recommendations")
-    st.markdown("")
 
-    recommendations = []
+    recs = []
+    if glucose        > 140: recs.append(("🍎", "High Glucose Alert",
+        "Your glucose is elevated. Monitor blood sugar regularly."))
+    if bmi            > 30:  recs.append(("🏃", "BMI Above Normal",
+        "Consider a weight management program with regular exercise."))
+    if blood_pressure > 130: recs.append(("💉", "Elevated Blood Pressure",
+        "Monitor BP regularly. Reduce sodium intake and manage stress."))
+    if age            > 45:  recs.append(("👨‍⚕️", "Age Factor",
+        "Diabetes risk increases with age. Schedule annual checkups."))
+    if dpf            > 0.8: recs.append(("🧬", "Genetic Risk Factor",
+        "Family history indicates higher risk. Be proactive."))
+    if insulin        > 200: recs.append(("💊", "High Insulin Level",
+        "Elevated insulin may indicate resistance. Consult a doctor."))
 
-    if glucose > 140:
-        recommendations.append({
-            "icon": "🍎", "title": "High Glucose Alert",
-            "text": "Your glucose level is elevated. Monitor blood sugar regularly."
-        })
-    if bmi > 30:
-        recommendations.append({
-            "icon": "🏃", "title": "BMI Above Normal",
-            "text": "Consider a weight management program with regular exercise."
-        })
-    if blood_pressure > 130:
-        recommendations.append({
-            "icon": "💉", "title": "Elevated Blood Pressure",
-            "text": "Monitor blood pressure regularly. Reduce sodium intake."
-        })
-    if age > 45:
-        recommendations.append({
-            "icon": "👨‍⚕️", "title": "Age Factor",
-            "text": "Diabetes risk increases with age. Schedule annual checkups."
-        })
-    if dpf > 0.8:
-        recommendations.append({
-            "icon": "🧬", "title": "Genetic Risk Factor",
-            "text": "Your family history indicates higher risk. Be proactive."
-        })
-    if insulin > 200:
-        recommendations.append({
-            "icon": "💊", "title": "High Insulin Level",
-            "text": "Elevated insulin may indicate resistance. Consult a doctor."
-        })
-
-    if recommendations:
-        for rec in recommendations:
+    if recs:
+        for icon, title, text in recs:
             st.markdown(f"""
             <div class="rec-card">
-                <span style="font-size: 1.3rem;">{rec['icon']}</span>
-                <b style="color: #53a8b6;"> {rec['title']}</b><br>
-                <span style="color: #a8a8b3;">{rec['text']}</span>
-            </div>
-            """, unsafe_allow_html=True)
+                {icon} <b style="color:#53a8b6;">{title}</b><br>
+                <span style="color:#a8a8b3;">{text}</span>
+            </div>""", unsafe_allow_html=True)
     else:
         st.markdown("""
-        <div class="rec-card" style="border-left-color: #2ed573;">
-            <span style="font-size: 1.3rem;">✅</span>
-            <b style="color: #2ed573;"> All Clear!</b><br>
-            <span style="color: #a8a8b3;">
+        <div class="rec-card" style="border-left-color:#2ed573;">
+            ✅ <b style="color:#2ed573;">All Clear!</b><br>
+            <span style="color:#a8a8b3;">
             Your values look great! Keep maintaining your healthy lifestyle.
             </span>
-        </div>
-        """, unsafe_allow_html=True)
+        </div>""", unsafe_allow_html=True)
 
     st.markdown('<div class="custom-divider"></div>', unsafe_allow_html=True)
 
     # Input Summary
     st.markdown("## 📋 Input Summary")
-    summary_col1, summary_col2 = st.columns(2)
-
-    with summary_col1:
+    s1, s2 = st.columns(2)
+    with s1:
         st.markdown(f"""
         <div class="glass-card">
-            <table style="width: 100%; color: #e0e0e0;">
-                <tr><td style="padding:8px; color:#53a8b6;">🤰 Pregnancies</td>
-                    <td style="padding:8px; text-align:right; font-weight:bold;">{pregnancies}</td></tr>
-                <tr><td style="padding:8px; color:#53a8b6;">🍬 Glucose</td>
-                    <td style="padding:8px; text-align:right; font-weight:bold;">{glucose} mg/dL</td></tr>
-                <tr><td style="padding:8px; color:#53a8b6;">💉 Blood Pressure</td>
-                    <td style="padding:8px; text-align:right; font-weight:bold;">{blood_pressure} mm Hg</td></tr>
-                <tr><td style="padding:8px; color:#53a8b6;">📏 Skin Thickness</td>
-                    <td style="padding:8px; text-align:right; font-weight:bold;">{skin_thickness} mm</td></tr>
-            </table>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with summary_col2:
+        <table style="width:100%; color:#e0e0e0;">
+            <tr><td style="padding:8px;color:#53a8b6;">🤰 Pregnancies</td>
+                <td style="padding:8px;text-align:right;font-weight:bold;">{pregnancies}</td></tr>
+            <tr><td style="padding:8px;color:#53a8b6;">🍬 Glucose</td>
+                <td style="padding:8px;text-align:right;font-weight:bold;">{glucose} mg/dL</td></tr>
+            <tr><td style="padding:8px;color:#53a8b6;">💉 Blood Pressure</td>
+                <td style="padding:8px;text-align:right;font-weight:bold;">{blood_pressure} mm Hg</td></tr>
+            <tr><td style="padding:8px;color:#53a8b6;">📏 Skin Thickness</td>
+                <td style="padding:8px;text-align:right;font-weight:bold;">{skin_thickness} mm</td></tr>
+        </table>
+        </div>""", unsafe_allow_html=True)
+    with s2:
         st.markdown(f"""
         <div class="glass-card">
-            <table style="width: 100%; color: #e0e0e0;">
-                <tr><td style="padding:8px; color:#53a8b6;">💊 Insulin</td>
-                    <td style="padding:8px; text-align:right; font-weight:bold;">{insulin} mu U/ml</td></tr>
-                <tr><td style="padding:8px; color:#53a8b6;">⚖️ BMI</td>
-                    <td style="padding:8px; text-align:right; font-weight:bold;">{bmi} kg/m²</td></tr>
-                <tr><td style="padding:8px; color:#53a8b6;">🧬 DPF</td>
-                    <td style="padding:8px; text-align:right; font-weight:bold;">{dpf}</td></tr>
-                <tr><td style="padding:8px; color:#53a8b6;">🎂 Age</td>
-                    <td style="padding:8px; text-align:right; font-weight:bold;">{age} years</td></tr>
-            </table>
-        </div>
-        """, unsafe_allow_html=True)
+        <table style="width:100%; color:#e0e0e0;">
+            <tr><td style="padding:8px;color:#53a8b6;">💊 Insulin</td>
+                <td style="padding:8px;text-align:right;font-weight:bold;">{insulin} mu U/ml</td></tr>
+            <tr><td style="padding:8px;color:#53a8b6;">⚖️ BMI</td>
+                <td style="padding:8px;text-align:right;font-weight:bold;">{bmi} kg/m²</td></tr>
+            <tr><td style="padding:8px;color:#53a8b6;">🧬 DPF</td>
+                <td style="padding:8px;text-align:right;font-weight:bold;">{dpf}</td></tr>
+            <tr><td style="padding:8px;color:#53a8b6;">🎂 Age</td>
+                <td style="padding:8px;text-align:right;font-weight:bold;">{age} years</td></tr>
+        </table>
+        </div>""", unsafe_allow_html=True)
 
 
 # ==========================================
@@ -622,12 +508,10 @@ if predict_clicked:
 # ==========================================
 st.markdown("""
 <div class="footer">
-    <p>
-    ⚠️ <b>Medical Disclaimer:</b> This is an AI-powered predictive tool for
-    educational purposes only. It is <b>NOT</b> a substitute for professional
-    medical diagnosis. Always consult a qualified healthcare professional.
-    </p>
-    <p style="margin-top: 15px;">
+    <p>⚠️ <b>Medical Disclaimer:</b> This is an AI-powered predictive tool for
+    educational purposes only. <b>NOT</b> a substitute for professional medical diagnosis.
+    Always consult a qualified healthcare professional.</p>
+    <p style="margin-top:15px;">
     🩺 Diabetes Prediction AI ·
     <a href="https://github.com/mahadiurrehman-pixel/diabetes-ann-model">GitHub</a> ·
     © 2024 Mahadiur Rehman
