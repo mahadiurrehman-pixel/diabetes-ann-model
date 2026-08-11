@@ -200,9 +200,11 @@ st.markdown("""
 # ==========================================
 @st.cache_resource
 def load_artifacts():
-    
-    # Model architecture dobara banao
-    # (same jaise training mein tha)
+    import pickle
+    from tensorflow.keras.models import Sequential
+    from tensorflow.keras.layers import Dense, Dropout
+
+    # Model architecture banao
     model = Sequential([
         Dense(16, activation='relu', input_shape=(8,)),
         Dropout(0.3),
@@ -210,25 +212,23 @@ def load_artifacts():
         Dropout(0.2),
         Dense(1, activation='sigmoid')
     ])
-    
+
     model.compile(
         optimizer='adam',
         loss='binary_crossentropy',
         metrics=['accuracy']
     )
-    
-    # Numpy se weights load karo
-    weights = np.load('model_weights.npy', allow_pickle=True)
+
+    # Pickle se weights load karo
+    with open('model_weights.pkl', 'rb') as f:
+        weights = pickle.load(f)
+
     model.set_weights(weights)
-    
+
     # Scaler load karo
     scaler = joblib.load('scaler.pkl')
-    
+
     return model, scaler
-
-# Globally assign karo
-model, scaler = load_artifacts()
-
 
 # ==========================================
 # HERO SECTION
