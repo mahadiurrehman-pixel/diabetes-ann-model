@@ -327,17 +327,31 @@ st.markdown("""
 # ==========================================
 @st.cache_resource
 def load_artifacts():
-    if os.path.exists('diabetes_ann_model.keras'):
-        model = load_model('diabetes_ann_model.keras')
-    elif os.path.exists('diabetes_ann_model.h5'):
-        model = load_model('diabetes_ann_model.h5')
-    else:
-        st.error("❌ Model file not found!")
-        st.stop()
-    scaler = joblib.load('scaler.pkl')
-    return model, scaler
+    import json
+    from tensorflow.keras.models import model_from_json
+    from tensorflow.keras.layers import Dense, Dropout
 
-model, scaler = load_artifacts()
+    # Architecture load karo
+    with open('model_architecture.json', 'r') as f:
+        model_json = json.load(f)
+
+    # Model rebuild karo
+    model = model_from_json(model_json)
+
+    # Weights load karo
+    model.load_weights('model_weights.weights.h5')
+
+    # Compile karo
+    model.compile(
+        optimizer='adam',
+        loss='binary_crossentropy',
+        metrics=['accuracy']
+    )
+
+    # Scaler load karo
+    scaler = joblib.load('scaler.pkl')
+
+    return model, scaler
 
 
 # ==========================================
