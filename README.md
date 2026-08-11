@@ -13,7 +13,7 @@
 
 Built with ANN, Random Forest, SMOTE, and deployed via Streamlit
 
-[🔴 Live Demo](#) · [📊 Dataset](#-dataset) · [🚀 Quick Start](#-quick-start) · [📖 Documentation](#-project-structure)
+[🔴 Live Demo](https://diabetes-ann-model-mahadi.streamlit.app/) · [📊 Dataset](#-dataset) · [🚀 Quick Start](#-quick-start) · [📖 Documentation](#-project-structure)
 
 </div>
 
