@@ -22,7 +22,7 @@ Built with ANN, Random Forest, SMOTE, and deployed via Streamlit
 ## 📌 Table of Contents
 
 - [Overview](#-overview)
-- [Features](#-features)
+- [Features](#-features) 
 - [Demo](#-demo)
 - [Dataset](#-dataset)
 - [Project Structure](#-project-structure)
